@@ -1,0 +1,32 @@
+from django.http import JsonResponse
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import PorterStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+def article_detail(request, pk):
+    try:
+        article = Article.objects.get(pk=pk)
+    except Article.DoesNotExist:
+        return JsonResponse({'error': 'Article not found'}, status=404)
+
+    stop_words = set(stopwords.words('english'))
+    stemmer = PorterStemmer()
+    words = word_tokenize(article.body)
+    filtered_words = [word for word in words if word.lower() not in stop_words]
+    stemmed_words = [stemmer.stem(word) for word in filtered_words]
+    preprocessed_text = ' '.join(stemmed_words)
+
+    vectorizer = TfidfVectorizer()
+    vectorized_text = vectorizer.fit_transform([preprocessed_text])
+    vectorized_text = vectorized_text.toarray()[0].tolist()
+
+    data = {
+        'id': article.id,
+        'title': article.title,
+        'body': article.body,
+        'preprocessed_text': preprocessed_text,
+        'vectorized_text': vectorized_text,
+    }
+
+    return JsonResponse(data)
