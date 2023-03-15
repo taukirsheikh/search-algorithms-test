@@ -1,0 +1,23 @@
+from rest_framework.generics import CreateAPIView, UpdateAPIView
+from rest_framework.mixins import RetrieveModelMixin
+
+from .models import MyModel
+from .serializers import MyModelSerializer
+
+class MyModelCreateUpdateView(CreateAPIView, RetrieveModelMixin, UpdateAPIView):
+    queryset = MyModel.objects.all()
+    serializer_class = MyModelSerializer
+
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        if pk is not None:
+            obj = self.get_queryset().filter(pk=pk).first()
+            return obj
+        else:
+            return None
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
