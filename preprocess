@@ -1,0 +1,33 @@
+from rest_framework import serializers
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import PorterStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+class ArticleSerializer(serializers.ModelSerializer):
+    preprocessed_text = serializers.SerializerMethodField()
+    vectorized_text = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Article
+        fields = ['id', 'title', 'body', 'preprocessed_text', 'vectorized_text']
+
+    def get_preprocessed_text(self, instance):
+        stop_words = set(stopwords.words('english'))
+        stemmer = PorterStemmer()
+        words = word_tokenize(instance.body)
+        filtered_words = [word for word in words if word.lower() not in stop_words]
+        stemmed_words = [stemmer.stem(word) for word in filtered_words]
+        return ' '.join(stemmed_words)
+
+    def get_vectorized_text(self, instance):
+        preprocessed_text = self.get_preprocessed_text(instance)
+        vectorizer = TfidfVectorizer()
+        vectorized_text = vectorizer.fit_transform([preprocessed_text])
+        return vectorized_text.toarray()[0].tolist()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['preprocessed_text'] = self.get_preprocessed_text(instance)
+        data['vectorized_text'] = self.get_vectorized_text(instance)
+        return data
